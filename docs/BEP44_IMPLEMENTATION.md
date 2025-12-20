@@ -226,12 +226,36 @@ pytest tests/test_ed25519_bep44.py -v
 2. **Custom UR registry** - Register `UR:CRYPTO-BEP44` type
 3. **Multi-key support** - Sign with multiple keys in one session
 4. **Verify mode** - Verify BEP44 signatures without signing
+5. **Alternative ed25519 implementation** - Option to use ed25519-donna (Trezor's library) for exact Trezor compatibility and potentially better performance on ARM hardware
 
 ## Dependencies
 
 ### New Dependency:
 
 - **cryptography >= 41.0.0** - For ed25519 operations
+
+**Why `cryptography` was chosen:**
+- Pure Python integration (no C compilation required)
+- Industry standard, FIPS-certified implementation
+- Precompiled wheels for all platforms
+- Consistent with SeedSigner's deployment philosophy (similar to embit's optional libsecp256k1)
+
+**Alternative: ed25519-donna**
+
+For users who prefer Trezor's exact implementation:
+- **Library:** [ed25519-donna](https://github.com/floodyberry/ed25519-donna) by Andrew Moon
+- **Trezor Integration:** [trezor-crypto](https://github.com/trezor/trezor-crypto/tree/master/ed25519-donna)
+- **Benefits:** Optimized for embedded ARM devices, constant-time operations, potentially faster
+- **Trade-offs:** Requires C compilation or prebuilt binaries, more complex build process
+- **Compatibility:** Fully compatible (RFC 8032) - produces identical signatures for same keys
+
+Both implementations are cryptographically equivalent. The switch can be made by:
+1. Adding trezor-crypto dependency
+2. Creating Python bindings via ctypes (similar to embit's secp256k1 approach)
+3. Updating imports in `helpers/ed25519_utils.py`
+4. All other code remains unchanged
+
+See `helpers/ed25519_utils.py` docstring for detailed migration notes.
 
 ### Existing Dependencies Used:
 

@@ -5,6 +5,32 @@ Implements:
 - SLIP-0010 key derivation for ed25519 from BIP39 seeds
 - BEP44 message signing according to BEP44 specification
 - Bencode formatting for BEP44 signing buffers
+
+## Ed25519 Library Choice
+
+This implementation uses the Python `cryptography` library for ed25519 operations.
+This library was chosen for:
+- Pure Python integration (no C compilation required on SeedSigner)
+- Industry standard, FIPS-certified implementation
+- Precompiled wheels available for all platforms
+- Consistent with SeedSigner's ease-of-deployment philosophy
+
+### Alternative: ed25519-donna (Trezor's Implementation)
+
+For exact Trezor compatibility, an alternative implementation could use ed25519-donna:
+- Library: https://github.com/floodyberry/ed25519-donna
+- Used by Trezor: https://github.com/trezor/trezor-crypto/tree/master/ed25519-donna
+- Optimized for embedded devices with constant-time operations
+- Potentially faster on ARM hardware (Raspberry Pi)
+
+Both implementations are fully compatible (RFC 8032) and will produce identical signatures
+for the same keys. The choice is primarily about build complexity vs. performance optimization.
+
+To switch to ed25519-donna:
+1. Add trezor-crypto as a dependency
+2. Create Python bindings via ctypes (similar to embit's secp256k1 approach)
+3. Replace `from cryptography...` imports with ed25519-donna bindings
+4. All other code remains unchanged (same API)
 """
 
 import hashlib
