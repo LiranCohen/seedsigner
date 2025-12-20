@@ -528,6 +528,7 @@ class SeedOptionsView(View):
     EXPORT_XPUB = ButtonOption("Export xpub")
     EXPLORER = ButtonOption("Address explorer")
     SIGN_MESSAGE = ButtonOption("Sign message")
+    SIGN_BEP44 = ButtonOption("Sign BEP44 message")
     BACKUP = ButtonOption("Backup seed", right_icon_name=SeedSignerIconConstants.CHEVRON_RIGHT)
     BIP85_CHILD_SEED = ButtonOption("BIP-85 child seed")
     DISCARD = ButtonOption("Discard seed", button_label_color="red")
@@ -580,7 +581,8 @@ class SeedOptionsView(View):
 
         if self.settings.get_value(SettingsConstants.SETTING__MESSAGE_SIGNING) == SettingsConstants.OPTION__ENABLED:
             button_data.append(self.SIGN_MESSAGE)
-        
+            button_data.append(self.SIGN_BEP44)
+
         if self.settings.get_value(SettingsConstants.SETTING__BIP85_CHILD_SEEDS) == SettingsConstants.OPTION__ENABLED and self.seed.bip85_supported:
             button_data.append(self.BIP85_CHILD_SEED)
 
@@ -613,6 +615,14 @@ class SeedOptionsView(View):
             self.controller.sign_message_data = dict(seed_num=self.seed_num)
             self.controller.resume_main_flow = Controller.FLOW__SIGN_MESSAGE
             return Destination(ScanView)
+
+        elif button_data[selected_menu_num] == self.SIGN_BEP44:
+            from seedsigner.views.bep44_views import SeedSignBep44StartView
+            # Store seed_num in bep44_data so views can access it
+            if not hasattr(self.controller, 'bep44_data') or not self.controller.bep44_data:
+                self.controller.bep44_data = {}
+            self.controller.bep44_data["seed_num"] = self.seed_num
+            return Destination(SeedSignBep44StartView)
 
         elif button_data[selected_menu_num] == self.BACKUP:
             return Destination(SeedBackupView, view_args=dict(seed_num=self.seed_num))

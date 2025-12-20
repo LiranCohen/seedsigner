@@ -64,7 +64,7 @@ class DecodeQR:
         if self.qr_type == None:
             self.qr_type = qr_type
 
-            if self.qr_type in [QRType.PSBT__UR2, QRType.OUTPUT__UR, QRType.ACCOUNT__UR, QRType.BYTES__UR]:
+            if self.qr_type in [QRType.PSBT__UR2, QRType.OUTPUT__UR, QRType.ACCOUNT__UR, QRType.BYTES__UR, QRType.SIGN_MESSAGE_BEP44]:
                 self.decoder = URDecoder() # BCUR Decoder
 
             elif self.qr_type == QRType.PSBT__SPECTER:
@@ -124,7 +124,7 @@ class DecodeQR:
             # it's already str data
             qr_str = data
 
-        if self.qr_type in [QRType.PSBT__UR2, QRType.OUTPUT__UR, QRType.ACCOUNT__UR, QRType.BYTES__UR]:
+        if self.qr_type in [QRType.PSBT__UR2, QRType.OUTPUT__UR, QRType.ACCOUNT__UR, QRType.BYTES__UR, QRType.SIGN_MESSAGE_BEP44]:
             added_part = self.decoder.receive_part(qr_str)
             if self.decoder.is_complete():
                 self.complete = True
@@ -201,6 +201,33 @@ class DecodeQR:
             return self.decoder.get_address_type()
 
 
+    def get_bep44_data(self) -> dict:
+        """
+        Extract BEP44 signing request data from UR:BYTES/... QR code.
+
+        Returns:
+            {
+                "seq": int,
+                "value": bytes,
+                "derivation_path": str,
+                "salt": bytes (optional)
+            }
+        """
+        if self.qr_type == QRType.SIGN_MESSAGE_BEP44 and self.complete:
+            from seedsigner.helpers.bep44_cbor import decode_bep44_request
+
+            # Get CBOR data from UR decoder
+            cbor_data = self.decoder.result_message().cbor
+
+            # Extract raw bytes from Bytes type
+            raw_bytes = Bytes.from_cbor(cbor_data).data
+
+            # Decode BEP44 request from CBOR
+            return decode_bep44_request(raw_bytes)
+
+        return None
+
+
     def get_qr_data(self) -> dict:
         """
         This provides a single access point for external code to retrieve the QR data,
@@ -231,7 +258,7 @@ class DecodeQR:
         if not self.decoder:
             return 0
 
-        if self.qr_type in [QRType.PSBT__UR2, QRType.OUTPUT__UR, QRType.ACCOUNT__UR, QRType.BYTES__UR]:
+        if self.qr_type in [QRType.PSBT__UR2, QRType.OUTPUT__UR, QRType.ACCOUNT__UR, QRType.BYTES__UR, QRType.SIGN_MESSAGE_BEP44]:
             return int(self.decoder.estimated_percent_complete(weight_mixed_frames=weight_mixed_frames) * 100)
 
         elif self.qr_type in [QRType.PSBT__SPECTER, QRType.PSBT__BBQR]:

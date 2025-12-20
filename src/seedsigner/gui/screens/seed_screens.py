@@ -1672,3 +1672,139 @@ class SeedSignMessageConfirmAddressScreen(ButtonListScreen):
             screen_y=derivation_path_display.screen_y + derivation_path_display.height + 2*GUIConstants.COMPONENT_PADDING,
         )
         self.components.append(address_display)
+
+
+#
+# BEP44 DHT Message Signing Screens
+#
+
+@dataclass
+class SeedSignBep44ConfirmMessageScreen(ButtonListScreen):
+    """
+    Display BEP44 message details for confirmation.
+
+    Shows: sequence number, value preview, value size, salt, derivation path
+    """
+    seq: int = None
+    value_preview: str = None
+    value_size: str = None
+    salt_preview: str = None
+    derivation_path: str = None
+
+    def __post_init__(self):
+        self.title = _("Confirm BEP44 Message")
+        self.is_bottom_list = True
+        self.is_button_text_centered = True
+        self.button_data = [ButtonOption("Next")]
+        super().__post_init__()
+
+        current_y = GUIConstants.TOP_NAV_HEIGHT + GUIConstants.COMPONENT_PADDING
+
+        # Sequence number
+        seq_display = IconTextLine(
+            icon_name=SeedSignerIconConstants.FINGERPRINT,
+            icon_color=GUIConstants.INFO_COLOR,
+            label_text=_("Sequence"),
+            value_text=str(self.seq),
+            is_text_centered=False,
+            screen_y=current_y,
+        )
+        self.components.append(seq_display)
+        current_y += seq_display.height + GUIConstants.COMPONENT_PADDING
+
+        # Value size
+        size_display = IconTextLine(
+            icon_name=SeedSignerIconConstants.FINGERPRINT,
+            icon_color=GUIConstants.INFO_COLOR,
+            label_text=_("Value Size"),
+            value_text=self.value_size,
+            is_text_centered=False,
+            screen_y=current_y,
+        )
+        self.components.append(size_display)
+        current_y += size_display.height + GUIConstants.COMPONENT_PADDING
+
+        # Value preview (hex)
+        value_text_area = TextArea(
+            text=f"Value (hex):\n{self.value_preview}",
+            is_text_centered=False,
+            screen_y=current_y,
+            height_ignores_below_baseline=True,
+        )
+        self.components.append(value_text_area)
+        current_y += value_text_area.height + GUIConstants.COMPONENT_PADDING
+
+        # Salt (if present)
+        if self.salt_preview:
+            salt_text_area = TextArea(
+                text=f"Salt (hex):\n{self.salt_preview}",
+                is_text_centered=False,
+                screen_y=current_y,
+                height_ignores_below_baseline=True,
+            )
+            self.components.append(salt_text_area)
+            current_y += salt_text_area.height + GUIConstants.COMPONENT_PADDING
+
+        # Derivation path
+        path_display = IconTextLine(
+            icon_name=SeedSignerIconConstants.DERIVATION,
+            icon_color=GUIConstants.INFO_COLOR,
+            label_text=_("Path"),
+            value_text=self.derivation_path,
+            is_text_centered=False,
+            screen_y=current_y,
+        )
+        self.components.append(path_display)
+
+
+@dataclass
+class SeedSignBep44ConfirmPublicKeyScreen(ButtonListScreen):
+    """
+    Display the ed25519 public key that will sign the message.
+    """
+    public_key_hex: str = None
+    public_key_formatted: str = None
+    derivation_path: str = None
+
+    def __post_init__(self):
+        self.title = _("Confirm Public Key")
+        self.is_bottom_list = True
+        self.is_button_text_centered = True
+        self.button_data = [ButtonOption("Sign")]
+        super().__post_init__()
+
+        current_y = GUIConstants.TOP_NAV_HEIGHT + GUIConstants.COMPONENT_PADDING
+
+        # Derivation path
+        path_display = IconTextLine(
+            icon_name=SeedSignerIconConstants.DERIVATION,
+            icon_color=GUIConstants.INFO_COLOR,
+            label_text=_("Path"),
+            value_text=self.derivation_path,
+            is_text_centered=False,
+            screen_y=current_y,
+        )
+        self.components.append(path_display)
+        current_y += path_display.height + 2 * GUIConstants.COMPONENT_PADDING
+
+        # Public key label
+        label_text_area = TextArea(
+            text="ed25519 Public Key:",
+            is_text_centered=False,
+            screen_y=current_y,
+            font_name=Fonts.BASKERVILLE_BOLD,
+            height_ignores_below_baseline=True,
+        )
+        self.components.append(label_text_area)
+        current_y += label_text_area.height + GUIConstants.COMPONENT_PADDING
+
+        # Public key (formatted with spaces)
+        key_text_area = TextArea(
+            text=self.public_key_formatted,
+            is_text_centered=False,
+            screen_y=current_y,
+            font_name=Fonts.COURIER_PRIME_REGULAR,
+            font_size=14,
+            height_ignores_below_baseline=True,
+        )
+        self.components.append(key_text_area)
