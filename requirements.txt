@@ -4,3 +4,4 @@ pyzbar @ git+https://github.com/seedsigner/pyzbar.git@c3c237821c6a20b17953efe59b
 qrcode==7.3.1
 urtypes==1.0.1
 cryptography>=41.0.0
+dnslib>=0.9.23

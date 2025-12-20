@@ -83,9 +83,12 @@ class SeedSignBep44ConfirmMessageView(View):
     """
     Display BEP44 message details for user confirmation.
 
+    Automatically detects if the message is a Pkarr payload and uses
+    specialized Pkarr screens to show parsed DNS records.
+
     Shows:
     - Sequence number
-    - Value (hex preview, truncated if large)
+    - Value (hex preview for generic, DNS records for Pkarr)
     - Salt (if present)
     - Derivation path
     """
@@ -94,6 +97,7 @@ class SeedSignBep44ConfirmMessageView(View):
 
     def run(self):
         from seedsigner.gui.screens import seed_screens
+        from seedsigner.helpers.dns_utils import is_dns_packet_payload, parse_dns_packet_payload
 
         data = self.controller.bep44_data
         if not data:
@@ -105,6 +109,30 @@ class SeedSignBep44ConfirmMessageView(View):
         salt = data.get("salt")
         derivation_path = data["derivation_path"]
 
+        # Check if this is a Pkarr payload
+        if is_dns_packet_payload(value):
+            # Parse Pkarr payload
+            dns_data = parse_dns_packet_payload(value)
+
+            if dns_data:
+                # Use specialized Pkarr confirmation screen
+                salt_hex = salt.hex() if salt else ""
+
+                selected_menu_num = self.run_screen(
+                    seed_screens.SeedSignDnsConfirmMessageScreen,
+                    seq=seq,
+                    dns_data=dns_data,
+                    derivation_path=derivation_path,
+                    salt_hex=salt_hex
+                )
+
+                if selected_menu_num == RET_CODE__BACK_BUTTON:
+                    return Destination(BackStackView)
+
+                # User confirmed, move to Pkarr public key confirmation
+                return Destination(SeedSignBep44ConfirmPublicKeyView, view_args={"is_dns_packet": True})
+
+        # Generic BEP44 (not Pkarr) - use standard confirmation
         # Prepare value preview (show first 64 hex chars, indicate if truncated)
         value_hex = value.hex()
         value_preview = value_hex if len(value_hex) <= 64 else value_hex[:64] + "..."
@@ -116,7 +144,7 @@ class SeedSignBep44ConfirmMessageView(View):
             salt_hex = salt.hex()
             salt_preview = salt_hex if len(salt_hex) <= 32 else salt_hex[:32] + "..."
 
-        # Display confirmation screen
+        # Display generic BEP44 confirmation screen
         selected_menu_num = self.run_screen(
             seed_screens.SeedSignBep44ConfirmMessageScreen,
             seq=seq,
@@ -137,14 +165,17 @@ class SeedSignBep44ConfirmPublicKeyView(View):
     """
     Display the ed25519 public key that will sign the message.
 
-    This allows the user to verify they're using the correct key.
+    For Pkarr messages, also displays the z-base-32 encoded domain identifier.
+    For generic BEP44, shows standard public key confirmation.
     """
-    def __init__(self):
+    def __init__(self, is_dns_packet: bool = False):
         super().__init__()
+        self.is_dns_packet = is_dns_packet
 
     def run(self):
         from seedsigner.gui.screens import seed_screens
         from seedsigner.helpers.ed25519_utils import derive_ed25519_keypair_from_seed, format_public_key_for_display
+        from seedsigner.helpers.dns_utils import is_dns_packet_payload
 
         data = self.controller.bep44_data
         if not data:
@@ -180,13 +211,26 @@ class SeedSignBep44ConfirmPublicKeyView(View):
             )
             return Destination(BackStackView)
 
-        # Display public key
-        selected_menu_num = self.run_screen(
-            seed_screens.SeedSignBep44ConfirmPublicKeyScreen,
-            public_key_hex=public_key_hex,
-            public_key_formatted=public_key_formatted,
-            derivation_path=derivation_path
-        )
+        # Check if Pkarr (either passed as arg or detected from value)
+        value = data["value"]
+        is_dns_packet = self.is_dns_packet or is_dns_packet_payload(value)
+
+        # Display appropriate public key screen
+        if is_dns_packet:
+            # Use Pkarr-specific screen with z-base-32 encoding
+            selected_menu_num = self.run_screen(
+                seed_screens.SeedSignDnsConfirmPublicKeyScreen,
+                public_key_hex=public_key_hex,
+                derivation_path=derivation_path
+            )
+        else:
+            # Use generic BEP44 public key screen
+            selected_menu_num = self.run_screen(
+                seed_screens.SeedSignBep44ConfirmPublicKeyScreen,
+                public_key_hex=public_key_hex,
+                public_key_formatted=public_key_formatted,
+                derivation_path=derivation_path
+            )
 
         if selected_menu_num == RET_CODE__BACK_BUTTON:
             return Destination(BackStackView)
