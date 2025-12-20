@@ -37,10 +37,8 @@ class SeedSignBep44StartView(View):
     def run(self):
         from seedsigner.views.scan_views import ScanView
 
-        # Launch scanner for UR:BYTES (SIGN_MESSAGE_BEP44 will be detected)
-        ret = ScanView(
-            qr_type=QRType.SIGN_MESSAGE_BEP44,
-        ).run()
+        # Launch scanner - will auto-detect as BYTES__UR
+        ret = ScanView().run()
 
         if ret == RET_CODE__BACK_BUTTON:
             return Destination(BackStackView)

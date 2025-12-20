@@ -205,6 +205,9 @@ class DecodeQR:
         """
         Extract BEP44 signing request data from UR:BYTES/... QR code.
 
+        Works with both BYTES__UR (auto-detected) and SIGN_MESSAGE_BEP44 (explicit) types.
+        Attempts to decode as BEP44 CBOR format and returns None if not valid BEP44.
+
         Returns:
             {
                 "seq": int,
@@ -212,18 +215,25 @@ class DecodeQR:
                 "derivation_path": str,
                 "salt": bytes (optional)
             }
+            or None if not valid BEP44 data
         """
-        if self.qr_type == QRType.SIGN_MESSAGE_BEP44 and self.complete:
-            from seedsigner.helpers.bep44_cbor import decode_bep44_request
+        if self.qr_type in [QRType.BYTES__UR, QRType.SIGN_MESSAGE_BEP44] and self.complete:
+            try:
+                from seedsigner.helpers.bep44_cbor import decode_bep44_request
 
-            # Get CBOR data from UR decoder
-            cbor_data = self.decoder.result_message().cbor
+                # Get CBOR data from UR decoder
+                cbor_data = self.decoder.result_message().cbor
 
-            # Extract raw bytes from Bytes type
-            raw_bytes = Bytes.from_cbor(cbor_data).data
+                # Extract raw bytes from Bytes type
+                raw_bytes = Bytes.from_cbor(cbor_data).data
 
-            # Decode BEP44 request from CBOR
-            return decode_bep44_request(raw_bytes)
+                # Decode BEP44 request from CBOR
+                # This will raise ValueError if not valid BEP44 format
+                return decode_bep44_request(raw_bytes)
+            except Exception as e:
+                # Not valid BEP44 data (might be wallet config or other BYTES type)
+                logger.debug(f"Not valid BEP44 data: {e}")
+                return None
 
         return None
 
