@@ -92,21 +92,22 @@ def decode_bep44_request(cbor_data: bytes) -> Dict[str, Any]:
     decoder = CBORDecoder(cbor_data)
 
     # Decode map
-    map_size = decoder.decodeMapSize()
+    map_size, _ = decoder.decodeMapSize()  # Returns (value, length) tuple
 
     result = {}
 
     for _ in range(map_size):
-        key = decoder.decodeInteger()
+        key, _ = decoder.decodeInteger()  # Returns (value, length) tuple
 
         if key == KEY_SEQ:
-            result["seq"] = decoder.decodeInteger()
+            result["seq"], _ = decoder.decodeInteger()
         elif key == KEY_VALUE:
-            result["value"] = decoder.decodeBytes()
+            result["value"], _ = decoder.decodeBytes()
         elif key == KEY_PATH:
-            result["derivation_path"] = decoder.decodeText()
+            path_bytes, _ = decoder.decodeText()
+            result["derivation_path"] = path_bytes.decode('utf-8')
         elif key == KEY_SALT:
-            result["salt"] = decoder.decodeBytes()
+            result["salt"], _ = decoder.decodeBytes()
         else:
             # Unknown key, skip value
             decoder.skip()
@@ -206,23 +207,23 @@ def decode_bep44_result(cbor_data: bytes) -> Dict[str, Any]:
     decoder = CBORDecoder(cbor_data)
 
     # Decode map
-    map_size = decoder.decodeMapSize()
+    map_size, _ = decoder.decodeMapSize()  # Returns (value, length) tuple
 
     result = {}
 
     for _ in range(map_size):
-        key = decoder.decodeInteger()
+        key, _ = decoder.decodeInteger()  # Returns (value, length) tuple
 
         if key == KEY_PUBLIC_KEY:
-            result["public_key"] = decoder.decodeBytes()
+            result["public_key"], _ = decoder.decodeBytes()
         elif key == KEY_SIGNATURE:
-            result["signature"] = decoder.decodeBytes()
+            result["signature"], _ = decoder.decodeBytes()
         elif key == KEY_SEQ:
-            result["seq"] = decoder.decodeInteger()
+            result["seq"], _ = decoder.decodeInteger()
         elif key == KEY_VALUE:
-            result["value"] = decoder.decodeBytes()
+            result["value"], _ = decoder.decodeBytes()
         elif key == KEY_SALT:
-            result["salt"] = decoder.decodeBytes()
+            result["salt"], _ = decoder.decodeBytes()
         else:
             # Unknown key, skip value
             decoder.skip()
