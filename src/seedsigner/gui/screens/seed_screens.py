@@ -1672,3 +1672,381 @@ class SeedSignMessageConfirmAddressScreen(ButtonListScreen):
             screen_y=derivation_path_display.screen_y + derivation_path_display.height + 2*GUIConstants.COMPONENT_PADDING,
         )
         self.components.append(address_display)
+
+
+#
+# BEP44 DHT Message Signing Screens
+#
+
+@dataclass
+class SeedSignBep44ConfirmMessageScreen(ButtonListScreen):
+    """
+    Display BEP44 message details for confirmation.
+
+    Shows: sequence number, value preview, value size, salt, derivation path
+    """
+    seq: int = None
+    value_preview: str = None
+    value_size: str = None
+    salt_preview: str = None
+    derivation_path: str = None
+
+    def __post_init__(self):
+        self.title = _("Confirm BEP44 Message")
+        self.is_bottom_list = True
+        self.is_button_text_centered = True
+        self.button_data = [ButtonOption("Next")]
+        super().__post_init__()
+
+        current_y = GUIConstants.TOP_NAV_HEIGHT + GUIConstants.COMPONENT_PADDING
+
+        # Sequence number
+        seq_display = IconTextLine(
+            icon_name=SeedSignerIconConstants.FINGERPRINT,
+            icon_color=GUIConstants.INFO_COLOR,
+            label_text=_("Sequence"),
+            value_text=str(self.seq),
+            is_text_centered=False,
+            screen_y=current_y,
+        )
+        self.components.append(seq_display)
+        current_y += seq_display.height + GUIConstants.COMPONENT_PADDING
+
+        # Value size
+        size_display = IconTextLine(
+            icon_name=SeedSignerIconConstants.FINGERPRINT,
+            icon_color=GUIConstants.INFO_COLOR,
+            label_text=_("Value Size"),
+            value_text=self.value_size,
+            is_text_centered=False,
+            screen_y=current_y,
+        )
+        self.components.append(size_display)
+        current_y += size_display.height + GUIConstants.COMPONENT_PADDING
+
+        # Value preview (hex)
+        value_text_area = TextArea(
+            text=f"Value (hex):\n{self.value_preview}",
+            is_text_centered=False,
+            screen_y=current_y,
+            height_ignores_below_baseline=True,
+        )
+        self.components.append(value_text_area)
+        current_y += value_text_area.height + GUIConstants.COMPONENT_PADDING
+
+        # Salt (if present)
+        if self.salt_preview:
+            salt_text_area = TextArea(
+                text=f"Salt (hex):\n{self.salt_preview}",
+                is_text_centered=False,
+                screen_y=current_y,
+                height_ignores_below_baseline=True,
+            )
+            self.components.append(salt_text_area)
+            current_y += salt_text_area.height + GUIConstants.COMPONENT_PADDING
+
+        # Derivation path
+        path_display = IconTextLine(
+            icon_name=SeedSignerIconConstants.DERIVATION,
+            icon_color=GUIConstants.INFO_COLOR,
+            label_text=_("Path"),
+            value_text=self.derivation_path,
+            is_text_centered=False,
+            screen_y=current_y,
+        )
+        self.components.append(path_display)
+
+
+@dataclass
+class SeedSignBep44ConfirmPublicKeyScreen(ButtonListScreen):
+    """
+    Display the ed25519 public key that will sign the message.
+    """
+    public_key_hex: str = None
+    public_key_formatted: str = None
+    derivation_path: str = None
+
+    def __post_init__(self):
+        self.title = _("Confirm Public Key")
+        self.is_bottom_list = True
+        self.is_button_text_centered = True
+        self.button_data = [ButtonOption("Sign")]
+        super().__post_init__()
+
+        current_y = GUIConstants.TOP_NAV_HEIGHT + GUIConstants.COMPONENT_PADDING
+
+        # Derivation path
+        path_display = IconTextLine(
+            icon_name=SeedSignerIconConstants.DERIVATION,
+            icon_color=GUIConstants.INFO_COLOR,
+            label_text=_("Path"),
+            value_text=self.derivation_path,
+            is_text_centered=False,
+            screen_y=current_y,
+        )
+        self.components.append(path_display)
+        current_y += path_display.height + 2 * GUIConstants.COMPONENT_PADDING
+
+        # Public key label
+        label_text_area = TextArea(
+            text="ed25519 Public Key:",
+            is_text_centered=False,
+            screen_y=current_y,
+            font_name=Fonts.BASKERVILLE_BOLD,
+            height_ignores_below_baseline=True,
+        )
+        self.components.append(label_text_area)
+        current_y += label_text_area.height + GUIConstants.COMPONENT_PADDING
+
+        # Public key (formatted with spaces)
+        key_text_area = TextArea(
+            text=self.public_key_formatted,
+            is_text_centered=False,
+            screen_y=current_y,
+            font_name=Fonts.COURIER_PRIME_REGULAR,
+            font_size=14,
+            height_ignores_below_baseline=True,
+        )
+        self.components.append(key_text_area)
+
+
+@dataclass
+class SeedSignDnsConfirmMessageScreen(ButtonListScreen):
+    """
+    Display Pkarr message details with parsed DNS records for user verification.
+
+    Shows:
+    - Timestamp
+    - Number of DNS records
+    - DNS record details (type, name, data)
+    - Derivation path
+    """
+    seq: int = 0
+    dns_data: dict = None  # From parse_pkarr_payload()
+    derivation_path: str = "m/44'/0'/0'/0/0"
+    salt_hex: str = ""
+
+    def __post_init__(self):
+        from seedsigner.helpers.dns_utils import format_dns_records_for_display, format_dns_packet_summary
+
+        # Parse Pkarr summary
+        summary = format_dns_packet_summary(self.dns_data) if self.dns_data else {}
+
+        button_data = []
+
+        # Title
+        button_data.append(TextArea(
+            text=_("DNS Message"),
+            font_name=Fonts.BASKERVILLE_BOLD,
+            font_size=24,
+            is_text_centered=True,
+        ))
+
+        # Sequence number
+        button_data.append(IconTextLine(
+            icon_name=SeedSignerIconConstants.FINGERPRINT,
+            icon_color=GUIConstants.INFO_COLOR,
+            label_text=_("Sequence"),
+            value_text=str(self.seq),
+            is_text_centered=False,
+        ))
+
+        # Timestamp
+        timestamp_str = summary.get('timestamp', 'Unknown')
+        button_data.append(IconTextLine(
+            icon_name=SeedSignerIconConstants.CLOCK,
+            icon_color=GUIConstants.INFO_COLOR,
+            label_text=_("Timestamp"),
+            value_text=timestamp_str,
+            is_text_centered=False,
+        ))
+
+        # DNS record count
+        record_count = summary.get('record_count', '0')
+        button_data.append(IconTextLine(
+            icon_name=FontAwesomeIconConstants.LIST,
+            icon_color=GUIConstants.INFO_COLOR,
+            label_text=_("DNS Records"),
+            value_text=record_count,
+            is_text_centered=False,
+        ))
+
+        # DNS packet size
+        dns_size = summary.get('dns_size', 'Unknown')
+        button_data.append(IconTextLine(
+            icon_name=FontAwesomeIconConstants.DATABASE,
+            icon_color=GUIConstants.INFO_COLOR,
+            label_text=_("Packet Size"),
+            value_text=dns_size,
+            is_text_centered=False,
+        ))
+
+        # Show DNS records (formatted)
+        if self.dns_data:
+            dns_records = self.dns_data.get('dns_records', [])
+            if dns_records:
+                button_data.append(TextArea(
+                    text=_("DNS Records:"),
+                    font_name=Fonts.BASKERVILLE_BOLD,
+                    font_size=18,
+                    is_text_centered=False,
+                ))
+
+                # Format and add records
+                record_lines = format_dns_records_for_display(dns_records, max_records=5)
+                for line in record_lines:
+                    button_data.append(TextArea(
+                        text=line,
+                        font_name=Fonts.COURIER_PRIME_REGULAR,
+                        font_size=12,
+                        is_text_centered=False,
+                        height_ignores_below_baseline=True,
+                    ))
+
+            # Show parse error/warning if present
+            parse_warning = summary.get('parse_warning')
+            if parse_warning:
+                button_data.append(TextArea(
+                    text=f"⚠ {parse_warning}",
+                    font_name=Fonts.BASKERVILLE_ITALIC,
+                    font_size=12,
+                    is_text_centered=False,
+                    color=GUIConstants.WARNING_COLOR,
+                ))
+
+        # Salt (if present)
+        if self.salt_hex:
+            button_data.append(IconTextLine(
+                icon_name=SeedSignerIconConstants.FINGERPRINT,
+                icon_color=GUIConstants.INFO_COLOR,
+                label_text=_("Salt"),
+                value_text=self.salt_hex[:16] + "..." if len(self.salt_hex) > 16 else self.salt_hex,
+                is_text_centered=False,
+            ))
+
+        # Derivation path
+        button_data.append(IconTextLine(
+            icon_name=SeedSignerIconConstants.DERIVATION,
+            icon_color=GUIConstants.INFO_COLOR,
+            label_text=_("Path"),
+            value_text=self.derivation_path,
+            is_text_centered=False,
+        ))
+
+        # Action buttons
+        button_data.append(TextArea(
+            text=_("Review the DNS records above"),
+            font_name=Fonts.BASKERVILLE_ITALIC,
+            font_size=14,
+            is_text_centered=True,
+            color=GUIConstants.BODY_FONT_COLOR,
+        ))
+
+        self.title = _("DNS Message")
+        self.is_bottom_list = True
+        self.is_button_text_centered = True
+        self.button_data = button_data
+
+        super().__post_init__()
+
+
+@dataclass
+class SeedSignDnsConfirmPublicKeyScreen(ButtonListScreen):
+    """
+    Display the ed25519 public key and z-base-32 encoded Pkarr identifier.
+
+    Shows:
+    - Hex-encoded public key
+    - Z-base-32 encoded public key (Pkarr domain identifier)
+    - Derivation path
+    """
+    public_key_hex: str = ""
+    derivation_path: str = "m/44'/0'/0'/0/0"
+
+    def __post_init__(self):
+        from seedsigner.helpers.dns_utils import z32_encode
+
+        # Format public key with spaces for readability
+        key_hex = self.public_key_hex
+        public_key_formatted = ' '.join([key_hex[i:i+8] for i in range(0, len(key_hex), 8)])
+
+        # Calculate z-base-32 encoding (Pkarr domain identifier)
+        try:
+            public_key_bytes = bytes.fromhex(key_hex)
+            z32_encoded = z32_encode(public_key_bytes)
+            # Format with spaces for readability
+            z32_formatted = ' '.join([z32_encoded[i:i+8] for i in range(0, len(z32_encoded), 8)])
+        except Exception:
+            z32_formatted = "Error encoding"
+
+        button_data = []
+
+        # Title
+        button_data.append(TextArea(
+            text=_("Ed25519 Public Key"),
+            font_name=Fonts.BASKERVILLE_BOLD,
+            font_size=24,
+            is_text_centered=True,
+        ))
+
+        # Derivation path
+        button_data.append(IconTextLine(
+            icon_name=SeedSignerIconConstants.DERIVATION,
+            icon_color=GUIConstants.INFO_COLOR,
+            label_text=_("Path"),
+            value_text=self.derivation_path,
+            is_text_centered=False,
+        ))
+
+        # Public key hex (label)
+        button_data.append(TextArea(
+            text=_("Public Key (hex):"),
+            font_name=Fonts.BASKERVILLE_BOLD,
+            font_size=16,
+            is_text_centered=False,
+            height_ignores_below_baseline=True,
+        ))
+
+        # Public key hex (value)
+        button_data.append(TextArea(
+            text=public_key_formatted,
+            font_name=Fonts.COURIER_PRIME_REGULAR,
+            font_size=12,
+            is_text_centered=False,
+            height_ignores_below_baseline=True,
+        ))
+
+        # Z-base-32 identifier (label)
+        button_data.append(TextArea(
+            text=_("Domain ID (z32):"),
+            font_name=Fonts.BASKERVILLE_BOLD,
+            font_size=16,
+            is_text_centered=False,
+            height_ignores_below_baseline=True,
+        ))
+
+        # Z-base-32 identifier (value)
+        button_data.append(TextArea(
+            text=z32_formatted,
+            font_name=Fonts.COURIER_PRIME_REGULAR,
+            font_size=12,
+            is_text_centered=False,
+            color=GUIConstants.ACCENT_COLOR,
+            height_ignores_below_baseline=True,
+        ))
+
+        # Info text
+        button_data.append(TextArea(
+            text=_("This is your DNS domain identifier"),
+            font_name=Fonts.BASKERVILLE_ITALIC,
+            font_size=14,
+            is_text_centered=True,
+            color=GUIConstants.BODY_FONT_COLOR,
+        ))
+
+        self.title = _("Ed25519 Key")
+        self.is_bottom_list = True
+        self.is_button_text_centered = True
+        self.button_data = button_data
+
+        super().__post_init__()

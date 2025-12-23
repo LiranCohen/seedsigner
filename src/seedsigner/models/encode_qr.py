@@ -400,3 +400,73 @@ class UrPsbtQrEncoder(BaseFountainQrEncoder):
         super().__post_init__()
         qr_ur_bytes = UR("crypto-psbt", UR_PSBT(self.psbt.serialize()).to_cbor())
         self.ur2_encode = UREncoder(ur=qr_ur_bytes, max_fragment_len=self.qr_max_fragment_size)
+
+
+@dataclass
+class Bep44RequestQrEncoder(BaseFountainQrEncoder):
+    """
+    Encodes a BEP44 signing request as UR:BYTES/... QR code.
+
+    This is primarily useful for testing or companion applications
+    that generate signing requests for SeedSigner to scan.
+    """
+    seq: int = 0
+    value: bytes = b""
+    derivation_path: str = "m/44'/0'/0'/0/0"
+    salt: bytes = None
+
+    def __post_init__(self):
+        from seedsigner.helpers.bep44_cbor import encode_bep44_request
+        from urtypes.bytes import Bytes
+
+        super().__post_init__()
+
+        # Encode request as CBOR
+        cbor_data = encode_bep44_request(
+            seq=self.seq,
+            v=self.value,
+            derivation_path=self.derivation_path,
+            salt=self.salt
+        )
+
+        # Wrap in Bytes type and create UR
+        bytes_obj = Bytes(cbor_data)
+        qr_ur_bytes = UR("bytes", bytes_obj.to_cbor())
+        self.ur2_encode = UREncoder(ur=qr_ur_bytes, max_fragment_len=self.qr_max_fragment_size)
+
+
+@dataclass
+class Bep44ResultQrEncoder(BaseFountainQrEncoder):
+    """
+    Encodes a BEP44 signing result as UR:BYTES/... QR code.
+
+    This is what SeedSigner displays after signing a BEP44 message.
+    The DHT client scans this to get the signature.
+    """
+    public_key: bytes = None
+    signature: bytes = None
+    seq: int = 0
+    include_value: bool = False
+    value: bytes = None
+    salt: bytes = None
+
+    def __post_init__(self):
+        from seedsigner.helpers.bep44_cbor import encode_bep44_result
+        from urtypes.bytes import Bytes
+
+        super().__post_init__()
+
+        # Encode result as CBOR
+        cbor_data = encode_bep44_result(
+            public_key=self.public_key,
+            signature=self.signature,
+            seq=self.seq,
+            include_value=self.include_value,
+            v=self.value if self.include_value else None,
+            salt=self.salt if self.include_value else None
+        )
+
+        # Wrap in Bytes type and create UR
+        bytes_obj = Bytes(cbor_data)
+        qr_ur_bytes = UR("bytes", bytes_obj.to_cbor())
+        self.ur2_encode = UREncoder(ur=qr_ur_bytes, max_fragment_len=self.qr_max_fragment_size)

@@ -23,6 +23,7 @@ class QRType:
     BITCOIN_ADDRESS = "bitcoin_address"
 
     SIGN_MESSAGE = "sign_message"
+    SIGN_MESSAGE_BEP44 = "sign_message_bep44"
 
     WALLET__SPECTER = "wallet__specter"
     WALLET__UR = "wallet__ur"
