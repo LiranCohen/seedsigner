@@ -8,4 +8,4 @@ src/seedsigner/models/settings_definition.json
 .coverage*
 
 *.po
-*.mo
+*.moseedsigner-deployment/
